@@ -84,7 +84,7 @@ function designer(x){var s=x.snap,g=x.goal,n=x.notes,T=D.team,tm=T.mtd,M=D.meta,
     tile('Days since update',n.med_upd==null?'–':Math.round(n.med_upd),'median · team '+Math.round(tn.med_upd),n.n>=3?cls(n.med_upd,tn.med_upd,2,true):'neu')+tile('Decision-maker named',pc(n.pct_dm),'concern named '+pc(n.pct_obj)+' · financing '+pc(n.pct_fin),n.n>=3?cls(n.pct_dm,tn.pct_dm,.05):'neu')+'</div>'+
     (n.dorm_n?'<p class="small">Also '+n.dorm_n+' older quotes ('+m0(n.dorm_usd)+', appointment 90+ days ago): decide revive-with-a-date or close, so the pipeline stays honest.</p>':'')+'</div>';
   nh+='<div class="card"><b>Deals that need a note</b> <span class="small">sorted by expected value (amount × close odds for its age)</span><div style="margin-top:8px">'+
-    (x.deals.length?x.deals.map(function(d){return '<div class="deal"><div class="top"><span><span class="ref">…'+esc(d.ref)+'</span> <b>'+esc(d.name||'(no first name)')+'</b> · <span class="small">'+esc(d.stage)+' · '+esc(d.src)+'</span></span><span class="amt">'+m0(d.usd)+'</span></div>'+
+    (x.deals.length?x.deals.map(function(d){return '<div class="deal"><div class="top"><span><b>'+esc(d.name||'(no first name)')+'</b> · <span class="small">'+esc(d.stage)+' · '+esc(d.src)+'</span></span><span class="amt">'+m0(d.usd)+'</span></div>'+
       '<div class="why"><span class="chip '+(d.upd>14?'r':'')+'">'+d.upd+'d since update</span><span class="chip">appt '+d.age+'d ago</span><span class="chip">note score '+d.score+'</span>'+(d.next?'<span class="chip g">next '+esc(d.next)+'</span>':'')+'</div><div class="why small">Missing: '+d.miss.map(esc).join(' · ')+'</div></div>'}).join(''):'<p>All live quotes have a recent update and a dated next step. 👏</p>')+'</div></div>';
   nh+='<div class="card"><b>What a great note looks like</b><div class="tmpl" style="margin-top:8px">'+esc(M.note_template)+'</div><ul class="tight small">'+M.note_checks.map(function(c){return '<li>✔︎ '+esc(c[1])+'</li>'}).join('')+'</ul><p class="fine">Plus a Follow-Up Date in ClosetWare. Log return visits as appointments.</p></div>';
   h+=sec('notes','📝 Notes health check',nh);
@@ -92,7 +92,7 @@ function designer(x){var s=x.snap,g=x.goal,n=x.notes,T=D.team,tm=T.mtd,M=D.meta,
   var L=D.lib,fh='';
   if(!x.focus.length)fh='<div class="card"><b>No data-driven gaps flagged right now.</b> Keep your rhythm: dated next steps, same-day notes, ask for the decision. Pick any skill in the library to sharpen.</div>';
   x.focus.forEach(function(f,i){var S=L.skills[f.skill];fh+='<div class="card focus"><div class="small">Focus '+(i+1)+' · '+S.icon+' '+esc(S.name)+'</div><h3>'+esc(f.title)+'</h3><div class="ev">'+esc(f.evidence)+'</div>'+
-    (f.deals&&f.deals.length?'<div style="margin-top:6px">'+f.deals.map(function(d){return '<span class="chip a">…'+esc(d.ref)+' '+esc(d.name)+' '+m0(d.usd)+'</span>'}).join('')+'</div>':'')+
+    (f.deals&&f.deals.length?'<div style="margin-top:6px">'+f.deals.map(function(d){return '<span class="chip a">'+esc(d.name)+' '+m0(d.usd)+'</span>'}).join('')+'</div>':'')+
     '<div style="margin-top:8px"><b class="small">What good looks like</b><ul class="tight">'+S.good.map(function(g){return '<li>'+esc(g)+'</li>'}).join('')+'</ul></div>'+
     '<div style="margin-top:8px"><b class="small">Learn it (verified links)</b>'+resList(f.skill)+'</div></div>'});
   h+=sec('focus','🧭 Your focus areas',fh+'<p class="fine">Detected from your ClosetWare data with simple rules (see How it works); ranked by the dollars involved. Up to 3, never a list of faults.</p>');
@@ -102,7 +102,7 @@ function designer(x){var s=x.snap,g=x.goal,n=x.notes,T=D.team,tm=T.mtd,M=D.meta,
   wh+='<div class="card quiz"><b>3-minute check: '+esc(L.skills[q.skill].name)+'</b><p>'+esc(q.q)+'</p>'+q.opts.map(function(o,i){return '<button data-i="'+i+'">'+esc(o)+'</button>'}).join('')+'<div id="qa" class="small"></div><p class="small" style="margin-top:10px"><b>Reflect:</b> '+esc(q.reflect)+'</p></div>';
   h+=sec('week','✅ This week',wh);
   h+=sec('learn','📚 Skill library',librarySkills());
-  h+='<p class="fine">ClosetWare data, read-only, NJ only. Sold = Sold (Final) + Sold (Designer) pending Final; 17 Lowe\'s bay records excluded. Clients shown by record ref + first name only.</p>';
+  h+='<p class="fine">ClosetWare data, read-only, NJ only. Sold = Sold (Final) + Sold (Designer) pending Final; 17 Lowe\'s bay records excluded. Clients shown by first name only.</p>';
   return h}
 function resList(sk){var L=D.lib,a=(L.internal[sk]||[]).concat(L.resources[sk]||[]);return a.map(function(r){return '<div class="res"><span class="kd '+esc(r.kind)+'">'+esc(r.kind)+'</span><div>'+(r.url?'<a href="'+esc(r.url)+'" target="_blank" rel="noopener noreferrer">'+esc(r.title)+'</a>':'<b>'+esc(r.title)+'</b>')+
   '<div class="m">'+esc(r.src)+' · '+esc(r.length)+(r.status==='403'?' · <span class="chip a">link unchecked (site blocks checks)</span>':'')+'</div><div class="small">'+esc(r.why)+'</div></div></div>'}).join('')}
