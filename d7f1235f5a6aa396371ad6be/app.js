@@ -8,7 +8,9 @@ async function sha(code){var h=await crypto.subtle.digest('SHA-256',new TextEnco
 async function decrypt(blob,code){var base=await crypto.subtle.importKey('raw',new TextEncoder().encode(code),'PBKDF2',false,['deriveKey']);
   var k=await crypto.subtle.deriveKey({name:'PBKDF2',salt:b64(blob.salt),iterations:blob.iter,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['decrypt']);
   var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(blob.iv)},k,b64(blob.ct));return JSON.parse(new TextDecoder().decode(pt))}
-async function unlock(code){code=String(code).trim().toLowerCase();var f=await sha(code);var r=await fetch('d/'+f+'.json',{cache:'no-store'});if(!r.ok)throw new Error('nf');return decrypt(await r.json(),code)}
+/* Canonical form: Unicode NFKC, lowercase, then keep ONLY a-z and 0-9. Hyphens/spaces/smart dashes/punctuation/line breaks are ignored, so "Amber-Moon-Tiger-42", "amber moon tiger 42." and "ambermoontiger42" are the same code. */
+function canon(s){s=String(s==null?'':s);try{s=s.normalize('NFKC')}catch(e){}return s.toLowerCase().replace(/[^a-z0-9]/g,'')}
+async function unlock(code){code=canon(code);var f=await sha(code);var r=await fetch('d/'+f+'.json',{cache:'no-store'});if(!r.ok)throw new Error('nf');return decrypt(await r.json(),code)}
 function lock(msg){$('#lock').classList.remove('hidden');$('#lockerr').textContent=msg||'';$('#code').focus()}
 $('#lockform').addEventListener('submit',async function(e){e.preventDefault();var c=$('#code').value.trim();if(!c)return;$('#lockerr').textContent='Opening…';
   try{D=await unlock(c);localStorage.setItem(LS,c);$('#lock').classList.add('hidden');start()}catch(err){$('#lockerr').textContent='That code did not work. Check it and try again.'}});
