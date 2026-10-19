@@ -1,5 +1,7 @@
-/* CFNJ Designer Coach: activity tracker (voice or typing). No backend: entries live in this browser's localStorage, keyed per designer.
-   No tokens or secrets here. Parser is pure (ACT.parse) so it can be tested without a browser. */
+/* CFNJ Designer Coach: activity tracker (voice or typing). Entries live in this browser's localStorage, keyed per designer, and each saved
+   entry is also POSTed to Andrew's Google Form (config: coach.py ACTIVITY_FORM -> D.meta.activity_form). Sync status per entry: s='pending'|'sent'
+   (entries saved before sync existed have no s and are not back-filled). Pending entries retry on page load and on the browser 'online' event.
+   Deletes stay local (not propagated). No tokens or secrets here (form/entry ids are public). Parser is pure (ACT.parse) so it can be tested without a browser. */
 'use strict';
 var ACT=(function(){
 var CATS=[{k:'calls',l:'Calls',i:'📞'},{k:'texts',l:'Texts / emails',i:'💬'},{k:'followups',l:'Follow-ups',i:'🔁'},{k:'appts',l:'Appointments held',i:'🏠'},
@@ -54,6 +56,38 @@ function summary(name,es,tg,now){now=now||new Date();var s=stats(es,now),w=s.wee
 function key(slug){return 'cfnj_activity_v1_'+slug}
 function load(slug){try{var a=JSON.parse(localStorage.getItem(key(slug))||'[]');return Array.isArray(a)?a:[]}catch(e){return[]}}
 function save(slug,a){try{localStorage.setItem(key(slug),JSON.stringify(a));return true}catch(e){return false}}
+/* ── central sync (Google Form formResponse; opaque no-cors response: no network error = sent) ── */
+var CKEY={calls:'calls',texts:'texts_emails',followups:'followups',appts:'appts',quotes:'quotes',showroom:'showroom',leads:'referrals',closes:'closes'};
+function countsStr(c){return CATS.map(function(k){return CKEY[k.k]+'='+(+((c||{})[k.k])||0)}).join('; ')}
+function payload(F,who,e){var f=F.fields,p={};p[f.designer]=who;p[f.date]=e.d;p[f.counts]=countsStr(e.c);p[f.note]=e.note||'';return p}
+function enc(p){return Object.keys(p).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(p[k])}).join('&')}
+function postForm(url,p){                                    /* resolves on send, rejects on network error / timeout */
+  if(typeof fetch==='function'){var tm;return Promise.race([
+      fetch(url,{method:'POST',mode:'no-cors',credentials:'omit',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:enc(p)}),
+      new Promise(function(_,rej){tm=setTimeout(function(){rej(new Error('timeout'))},25000)})]).then(function(r){clearTimeout(tm);return r},function(e){clearTimeout(tm);throw e})}
+  return new Promise(function(res,rej){try{                   /* fallback without fetch: hidden form into a hidden iframe */
+    var n='actf'+Date.now()+Math.floor(Math.random()*1e6),ifr=document.createElement('iframe'),fm=document.createElement('form');
+    ifr.name=n;ifr.style.display='none';fm.method='POST';fm.action=url;fm.target=n;fm.style.display='none';
+    Object.keys(p).forEach(function(k){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=p[k];fm.appendChild(i)});
+    var done=false;ifr.onload=function(){if(done)return;done=true;res();setTimeout(function(){ifr.remove();fm.remove()},1000)};
+    document.body.appendChild(ifr);document.body.appendChild(fm);fm.submit();setTimeout(function(){if(!done){done=true;rej(new Error('timeout'))}},25000)}catch(e){rej(e)}})}
+var INFLIGHT={},FKEY='cfnj_activity_form_v1';
+/* Send every pending entry of one designer (Designer field = e.w, the name stored with the entry at save time). back(changed) when done. */
+function sync(slug,F,back){if(!F||!F.url){back&&back(false);return}
+  if(typeof navigator!=='undefined'&&navigator.onLine===false){back&&back(false);return}
+  var todo=load(slug).filter(function(e){return e.s==='pending'&&e.w&&!INFLIGHT[e.id]});if(!todo.length){back&&back(false);return}
+  var left=todo.length,changed=false;todo.forEach(function(e){INFLIGHT[e.id]=1;
+    postForm(F.url,payload(F,e.w,e)).then(function(){var a=load(slug);a.forEach(function(z){if(z.id===e.id){z.s='sent';z.sa=Date.now()}});save(slug,a);changed=true},function(){})
+    .then(function(){delete INFLIGHT[e.id];if(--left===0)back&&back(changed)})})}
+/* Form config is cached in localStorage (not secret) so pending entries retry on page load even before the page is unlocked. */
+function setForm(F){try{if(F)localStorage.setItem(FKEY,JSON.stringify(F));else localStorage.removeItem(FKEY)}catch(e){}}
+function getForm(){try{return JSON.parse(localStorage.getItem(FKEY)||'null')}catch(e){return null}}
+function syncAll(F,back){F=F||getForm();if(!F)return;var slugs=[];try{for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.indexOf(key(''))===0)slugs.push(k.slice(key('').length))}}catch(e){return}
+  slugs.forEach(function(sl){sync(sl,F,function(ch){if(ch&&back)back(sl)})})}
+function pending(es){return es.filter(function(e){return e.s==='pending'}).length}
 function speechOK(){return typeof window!=='undefined'&&!!(window.SpeechRecognition||window.webkitSpeechRecognition)}
-return{CATS:CATS,parse:parse,stats:stats,summary:summary,touches:touches,load:load,save:save,ymd:ymd,speechOK:speechOK}})();
+return{CATS:CATS,countsStr:countsStr,payload:payload,sync:sync,syncAll:syncAll,setForm:setForm,getForm:getForm,pending:pending,parse:parse,stats:stats,summary:summary,touches:touches,load:load,save:save,ymd:ymd,speechOK:speechOK}})();
 if(typeof module!=='undefined')module.exports=ACT;
+/* retry pending entries on page load and whenever the browser comes back online (app.js re-renders via ACT_ONSYNC) */
+if(typeof window!=='undefined'&&window.addEventListener){var actRetry=function(){ACT.syncAll(null,function(sl){if(typeof window.ACT_ONSYNC==='function')window.ACT_ONSYNC(sl)})};
+  window.addEventListener('online',actRetry);if(document.readyState==='complete')setTimeout(actRetry,500);else window.addEventListener('load',function(){setTimeout(actRetry,500)})}
