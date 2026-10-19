@@ -74,3 +74,17 @@ details{background:#fff;border:1px solid var(--line);border-radius:12px;padding:
 .kv{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px dashed var(--line);font-size:14.5px}.kv:first-child{border-top:0}.kv b{white-space:nowrap}
 @media(max-width:420px){.tile .v{font-size:21px}.hero h2{font-size:21px}}
 @media(max-width:759px){#nav{order:3;flex:1 1 100%}#nav:empty{display:none}.ctl{margin-left:auto}.minis{top:96px}body.dview .minis{top:58px}}
+
+.gph{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start}
+.seg{display:flex;border:1px solid var(--navy);border-radius:999px;overflow:hidden}.seg button{background:#fff;color:var(--navy);border:0;padding:6px 12px;font-size:13px;cursor:pointer;font-weight:600}.seg button.on{background:var(--navy);color:#fff}
+.gpt{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}.gpl{font-weight:700;margin-bottom:4px}
+.gpt .gpn{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 14px}.gpm{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:2px 0}.gpm span{color:var(--mut)}.gpl{grid-column:1/-1}
+.gpg{display:grid;gap:8px;grid-template-columns:1fr}
+.gpc{border:1px solid var(--line);border-radius:12px;padding:9px 11px;cursor:pointer;background:#fff;min-width:0}.gpc:hover{background:#faf8f3}
+.gpr{display:flex;align-items:center;gap:6px}.gpname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gppct{font-weight:800;font-size:20px}
+.gbar{position:relative;height:12px;background:#ece7dc;border-radius:6px;margin:8px 0 9px}.gbar>div{position:absolute;top:0;bottom:0}
+.gbar .p{left:0;border-radius:6px;background:repeating-linear-gradient(45deg,#9fb2c9,#9fb2c9 5px,#b8c7d9 5px,#b8c7d9 10px)}.gbar .f{left:0;border-radius:6px 0 0 6px;background:#12263f}.gbar .q{background:#2f6fdd}
+.gbar .m{top:-4px;bottom:-4px;width:3px;margin-left:-1px;background:#14171c;border-radius:2px}.gbar .m.g{background:#b26b00}
+.gpd{display:flex;justify-content:space-between;gap:8px;font-size:13.5px;flex-wrap:wrap}
+@media(min-width:600px){.gpg{grid-template-columns:repeat(2,minmax(0,1fr))}.gpt .gpn{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:1000px){.gpg{grid-template-columns:repeat(3,minmax(0,1fr))}.gpt .gpn{grid-template-columns:repeat(6,minmax(0,1fr))}}
