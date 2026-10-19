@@ -96,3 +96,4 @@ details{background:#fff;border:1px solid var(--line);border-radius:12px;padding:
 @media(max-width:420px){.vid img{width:96px;height:54px}}
 
 .msg,.act .t,.act .small{overflow-wrap:anywhere;word-break:break-word}
+.vid .chip{white-space:normal}
