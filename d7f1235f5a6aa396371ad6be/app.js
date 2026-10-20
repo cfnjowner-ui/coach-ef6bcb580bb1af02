@@ -47,6 +47,7 @@ function gtxt(h){if(h.basis==='none')return'No goal shown (on leave, no leads).'
 /* ── designer page ── */
 function designer(x){var s=x.snap,g=x.goal,n=x.notes,T=D.team,tm=T.mtd,M=D.meta,h='';
   if(D.kind==='owner')h+='<a class="back" href="#people">← All designers</a>';
+  if(x.test)h+='<div class="card" style="border-left:5px solid #c47f00;background:#fff8e6"><b>🧪 TEST PAGE</b><p class="small" style="margin:6px 0 0">'+esc(x.test.label||x.name)+': a copy of '+esc(x.test.mirror||'a designer')+'\'s real page for testing. Activity entries saved here are sent to the Activity log Sheet with Designer = "'+esc(x.act_who||x.name)+'" so they are easy to filter and delete. Not counted in team totals.</p></div>';
   h+='<div class="card hero"><div class="m">'+esc(M.month)+' · day '+M.day+' of '+M.dim+' · '+M.days_left+' days left</div><h2>'+esc(x.name)+'</h2><div class="m">Personal coaching page · coach, not judge: every number compares you fairly to the team for the leads you run.</div></div>';
   h+='<div class="minis"><a href="#wins">Wins</a><a href="#activity">My activity</a><a href="#snap">Snapshot</a><a href="#goal">Goal</a><a href="#notes">Next steps</a><a href="#focus">Focus</a><a href="#week">This week</a><a href="#learn">Library</a></div>';
   /* wins first */
@@ -195,7 +196,7 @@ function how(){var c=D.meta.cfg,w=c.NOTE_W;var PL=D.meta.plan;return (PL?'<div c
 function wireOwner(){document.querySelectorAll('[data-gs]').forEach(function(b){b.onclick=function(){GP_SORT=b.dataset.gs;var e=$('#gp');if(e){e.innerHTML=goalPanel();wireOwner()}}});document.querySelectorAll('[data-s]').forEach(function(e){e.onclick=function(){location.hash='d/'+e.dataset.s}});document.querySelectorAll('[data-q]').forEach(function(b){b.onclick=function(){copy(D.owner.queue[+b.dataset.q].text)}})}
 /* ── activity tracker (UI; parser + storage in activity.js). Entries stay in this browser (localStorage), keyed per designer. ── */
 var ACT_DRAFT=null,ACT_REC=null,ACT_CUR=null;
-function actWho(x){return D.kind==='owner'?x.name+' (owner preview)':x.name}
+function actWho(x){return D.kind==='owner'?x.name+' (owner preview)':(x.act_who||x.name)}   /* test page: act_who='Test Designer' (coach.py TEST_NAME) */
 window.ACT_ONSYNC=function(sl){if(D&&ACT_CUR&&ACT_CUR.slug===sl&&$('#actTotals'))actRender(ACT_CUR)};
 function actSection(x){var tg=x.activity_target||{};
   var h='<div class="card actin">'+(D.kind==='owner'?'<div class="ownnote small"><b>Owner preview.</b> Anything you log here is saved on <b>this</b> device under '+esc(x.first)+'\'s page and sent to the log tagged "(owner preview)". Designers\' own entries are sent to you automatically when they save.'+(D.meta.activity_sheet?' <a href="'+esc(D.meta.activity_sheet)+'" target="_blank" rel="noopener noreferrer">Activity log (Google Sheet)</a>':'')+'</div>':'')+
