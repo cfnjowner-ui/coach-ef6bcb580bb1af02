@@ -1,4 +1,4 @@
-/* CFNJ Designer Coach. Static, private: data files are AES-256-GCM encrypted; the access code picks the file (SHA-256) and decrypts it in the browser. */
+/* CFNJ Designer Coach. Static, private: data files are AES-256-GCM encrypted. Published site (kdf.json present, v2): ONE slow PBKDF2 (3,000,000 iterations, site salt) of the access code gives both the AES key and the file name, so file names never reveal a code. Local preview (no kdf.json, v1): SHA-256 file name + per-file PBKDF2. */
 'use strict';
 var D=null, CUR=null, LS='cfnj_coach_code';
 var $=function(s){return document.querySelector(s)};
@@ -10,7 +10,15 @@ async function decrypt(blob,code){var base=await crypto.subtle.importKey('raw',n
   var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(blob.iv)},k,b64(blob.ct));return JSON.parse(new TextDecoder().decode(pt))}
 /* Canonical form: Unicode NFKC, lowercase, then keep ONLY a-z and 0-9. Hyphens/spaces/smart dashes/punctuation/line breaks are ignored, so "Amber-Moon-Tiger-42", "amber moon tiger 42." and "ambermoontiger42" are the same code. */
 function canon(s){s=String(s==null?'':s);try{s=s.normalize('NFKC')}catch(e){}return s.toLowerCase().replace(/[^a-z0-9]/g,'')}
-async function unlock(code){code=canon(code);var f=await sha(code);var r=await fetch('d/'+f+'.json',{cache:'no-store'});if(!r.ok)throw new Error('nf');return decrypt(await r.json(),code)}
+var KDF=null;async function kdf(){if(KDF===null){try{var r=await fetch('kdf.json',{cache:'no-store'});KDF=r.ok?await r.json():false}catch(e){KDF=false}}return KDF}
+function hex(u){return Array.from(u).map(function(x){return x.toString(16).padStart(2,'0')}).join('')}
+async function h256(a,tag){var t=new TextEncoder().encode(tag),u=new Uint8Array(a.length+t.length);u.set(a);u.set(t,a.length);return new Uint8Array(await crypto.subtle.digest('SHA-256',u))}
+async function unlock2(code,K){var base=await crypto.subtle.importKey('raw',new TextEncoder().encode(code),'PBKDF2',false,['deriveBits']);
+  var m=new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt:b64(K.salt),iterations:K.iter,hash:'SHA-256'},base,256));
+  var f=hex(await h256(m,'|cfnj-fid')).slice(0,24);var r=await fetch('d/'+f+'.json',{cache:'no-store'});if(!r.ok)throw new Error('nf');var blob=await r.json();
+  var k=await crypto.subtle.importKey('raw',await h256(m,'|cfnj-key'),{name:'AES-GCM'},false,['decrypt']);
+  var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(blob.iv)},k,b64(blob.ct));return JSON.parse(new TextDecoder().decode(pt))}
+async function unlock(code){code=canon(code);var K=await kdf();if(K&&K.v===2)return unlock2(code,K);var f=await sha(code);var r=await fetch('d/'+f+'.json',{cache:'no-store'});if(!r.ok)throw new Error('nf');return decrypt(await r.json(),code)}
 function lock(msg){$('#lock').classList.remove('hidden');$('#lockerr').textContent=msg||'';$('#code').focus()}
 $('#lockform').addEventListener('submit',async function(e){e.preventDefault();var c=$('#code').value.trim();if(!c)return;$('#lockerr').textContent='Opening…';
   try{D=await unlock(c);localStorage.setItem(LS,c);$('#lock').classList.add('hidden');start()}catch(err){$('#lockerr').textContent='That code did not work. Check it and try again.'}});
@@ -159,7 +167,7 @@ function goalPanel(){var O=D.owner,M=D.meta,ts=M.typ_share,near=M.cfg.PACE_NEAR,
       '<div class="gpd"><span>Sold <b class="'+x.st+'">'+m0(r.usd)+'</b>'+(r.pend>0?' <span class="small">(+'+m0(r.pend)+' pending)</span>':'')+'</span><span>'+(isP?'Oct target':'Goal')+' <b>'+m0(x.g)+'</b></span></div>'+
       '<div class="gpd"><span class="small">'+(isP?'On path ':'On pace ')+m0(x.pace)+' · '+(x.behind>0?'<b class="'+(x.st==='neg'?'neg':'neu')+'">'+m0(x.behind)+' behind</b>':'<b class="pos">'+m0(-x.behind)+' ahead</b>')+'</span><span class="small">Proj <b class="'+cls(r.proj,x.g,x.g*.05)+'">'+m0(r.proj)+'</b></span></div>'+
       (isP&&r.personal!=null?'<div class="gpd"><span class="small">Personal goal (reference) '+m0(r.personal)+' · gap to target '+(r.target-r.usd>0?m0(r.target-r.usd):'hit')+'</span></div>':(r.no_target_why?'<div class="gpd"><span class="small">No October target: '+esc(r.no_target_why)+'</span></div>':''))+'</div>'}).join('')+'</div>';
-  if(leave.length)h+='<p class="fine" style="margin:8px 0 0">On leave, no goal: '+leave.map(function(r){return esc(r.name)}).join(', ')+'. Cynthia Teel is inactive and not on the roster. Color: green = at or above the path; black = near or too early to judge; red = behind by more than 10% of the plan since Oct 18 (personal-goal rows: more than 10% behind pace).</p>';
+  if(leave.length)h+='<p class="fine" style="margin:8px 0 0">On leave, no goal: '+leave.map(function(r){return esc(r.name)}).join(', ')+'. Inactive designers are not on the roster. Color: green = at or above the path; black = near or too early to judge; red = behind by more than 10% of the plan since Oct 18 (personal-goal rows: more than 10% behind pace).</p>';
   return h+'</div>'}
 
 function team(){var O=D.owner,T=D.team,M=D.meta,t=O.tot,h='';
