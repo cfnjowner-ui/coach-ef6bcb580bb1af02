@@ -240,7 +240,7 @@ function actConfirm(x,res,note){var C=ACT.CATS,c=$('#actConfirm');ACT_DRAFT={c:r
   c.innerHTML='<div class="small" style="margin:10px 0 6px"><b>Check the counts, fix anything, then save.</b> '+esc(found)+'</div><div class="steps">'+C.map(function(k){return '<div class="step"><span>'+k.i+' '+esc(k.l)+'</span><div class="sp"><button type="button" data-k="'+k.k+'" data-d="-1" aria-label="minus">−</button><input inputmode="numeric" pattern="[0-9]*" data-k="'+k.k+'" value="'+(res.counts[k.k]||0)+'"><button type="button" data-k="'+k.k+'" data-d="1" aria-label="plus">+</button></div></div>'}).join('')+'</div>'+
    '<div class="actrow"><button type="button" class="btn" id="actSave">Save</button><button type="button" class="btn ghost" id="actCancel">Cancel</button></div>';
   c.querySelectorAll('.sp button').forEach(function(b){b.onclick=function(){var i=c.querySelector('input[data-k="'+b.dataset.k+'"]');i.value=Math.max(0,(parseInt(i.value,10)||0)+(+b.dataset.d))}});
-  $('#actCancel').onclick=function(){c.classList.add('hidden');c.innerHTML=''};
+  $('#actCancel').onclick=function(){c.classList.add('hidden');c.innerHTML='';var tb=$('#actTxt');if(tb&&!tb.value&&note)tb.value=note};
   $('#actSave').onclick=function(){var cnt={},any=0;c.querySelectorAll('input[data-k]').forEach(function(i){var v=Math.max(0,Math.min(999,parseInt(i.value,10)||0));if(v){cnt[i.dataset.k]=v;any+=v}});
     if(!any){toast('Add at least one count');return}var d=new Date();d.setDate(d.getDate()-(+$('#actDay').value||0));
     var F=D.meta.activity_form,es=ACT.load(x.slug),ne={id:Date.now()+'-'+Math.random().toString(36).slice(2,7),d:ACT.ymd(d),t:Date.now(),c:cnt,note:(note||'').slice(0,500)};if(F){ne.s='pending';ne.w=actWho(x)}es.push(ne);
@@ -248,7 +248,7 @@ function actConfirm(x,res,note){var C=ACT.CATS,c=$('#actConfirm');ACT_DRAFT={c:r
     c.classList.add('hidden');c.innerHTML='';$('#actTxt').value='';actRender(x);toast('Saved');
     if(F)ACT.sync(x.slug,F,function(ch){if(ch){toast('Saved and sent to Andrew');window.ACT_ONSYNC(x.slug)}else if(ACT.pending(ACT.load(x.slug)))toast('Saved. It will send when you are online')})}}
 function actWire(x){if(!$('#actTotals'))return;actRender(x);var txt=$('#actTxt'),mic=$('#actMic'),L=$('#actMicL'),S=$('#actMicS');
-  $('#actRead').onclick=function(){var t=txt.value.trim();actConfirm(x,ACT.parse(t),t)};
+  $('#actRead').onclick=function(){var t=txt.value.trim();if(rec){try{rec.onresult=null;rec.stop()}catch(e){}}actConfirm(x,ACT.parse(t),t);txt.value='';txt.blur()};  /* Andrew Oct 21: clear the box once read; Cancel puts the note back */
   if(!ACT.speechOK()){mic.classList.add('hidden');L.textContent='Voice button not available in this browser';S.innerHTML='No problem: tap the box below and use the 🎤 on your phone\'s keyboard to dictate, or just type.';return}
   var R=window.SpeechRecognition||window.webkitSpeechRecognition,rec=null,base='';
   mic.onclick=function(){if(rec){try{rec.stop()}catch(e){}return}
@@ -257,5 +257,5 @@ function actWire(x){if(!$('#actTotals'))return;actRender(x);var txt=$('#actTxt')
     rec.onstart=function(){mic.classList.add('on');L.textContent='Listening… tap again to stop';S.textContent='Say what you did today.'};
     rec.onresult=function(ev){var f='',it='';for(var i=0;i<ev.results.length;i++){if(ev.results[i].isFinal)f+=ev.results[i][0].transcript;else it+=ev.results[i][0].transcript}txt.value=(base?base+', ':'')+(f+it).trim()};
     rec.onerror=function(ev){var m={'not-allowed':'Microphone access is off for this site. You can type, or use your keyboard\'s 🎤.','service-not-allowed':'Voice is blocked here. You can type, or use your keyboard\'s 🎤.','no-speech':'Didn\'t catch that. Tap the mic and try again.','network':'Voice needs an internet connection. You can type instead.','audio-capture':'No microphone found. You can type instead.'}[ev.error];S.textContent=m||'Voice stopped. You can type instead.'};
-    rec.onend=function(){mic.classList.remove('on');rec=null;L.textContent='Tap the mic and say what you did';var t=txt.value.trim();if(t&&t!==base)actConfirm(x,ACT.parse(t),t)};
+    rec.onend=function(){mic.classList.remove('on');rec=null;L.textContent='Tap the mic and say what you did';var t=txt.value.trim();if(t&&t!==base){actConfirm(x,ACT.parse(t),t);txt.value=''}};
     try{rec.start()}catch(e){rec=null;S.textContent='Voice could not start. You can type instead.'}}}
