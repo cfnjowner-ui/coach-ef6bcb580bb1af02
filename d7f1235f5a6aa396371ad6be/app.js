@@ -203,7 +203,7 @@ function actSection(x){var tg=x.activity_target||{};
    '<p class="small" style="margin:0 0 10px">Log what you did, by voice or typing. It takes about 20 seconds and shows you your real week: today, this week and this month.</p>'+
    '<div class="micwrap"><button type="button" id="actMic" class="mic" aria-label="Tap and speak">🎤</button><div><b id="actMicL">Tap the mic and say what you did</b><div class="small" id="actMicS">For example: "called 5 clients, sent 3 follow-up texts, 1 showroom visit, 2 in-home appointments, 1 quote sent"</div></div></div>'+
    '<textarea id="actTxt" rows="3" placeholder="Or type here (your keyboard\'s 🎤 works too): called 5 clients, sent 3 follow-up texts, 2 in-home appointments, 1 quote sent"></textarea>'+
-   '<div class="actrow"><select id="actDay" aria-label="Which day"><option value="0">Today</option><option value="1">Yesterday</option><option value="2">2 days ago</option></select><button type="button" class="btn" id="actRead">Read my note →</button></div>'+
+   '<div class="actrow"><select id="actDay" aria-label="Which day"><option value="0">Today</option><option value="1">Yesterday</option><option value="2">2 days ago</option></select><button type="button" class="btn" id="actRead">Save my note →</button></div>'+
    '<div id="actConfirm" class="hidden"></div>'+(D.meta.activity_form?'<p class="fine actsync" style="margin:10px 0 0">Your entries are also sent to Andrew automatically. Deleting an entry here removes it from this device only, not from Andrew\'s copy.<span id="actPend"></span></p>':'')+'</div><div id="actTotals"></div>';
   return sec('activity','📋 My activity',h)}
 function actTargetText(tg){var p=[];
@@ -242,13 +242,15 @@ function actConfirm(x,res,note){var C=ACT.CATS,c=$('#actConfirm');ACT_DRAFT={c:r
   c.querySelectorAll('.sp button').forEach(function(b){b.onclick=function(){var i=c.querySelector('input[data-k="'+b.dataset.k+'"]');i.value=Math.max(0,(parseInt(i.value,10)||0)+(+b.dataset.d))}});
   $('#actCancel').onclick=function(){c.classList.add('hidden');c.innerHTML='';var tb=$('#actTxt');if(tb&&!tb.value&&note)tb.value=note};
   $('#actSave').onclick=function(){var cnt={},any=0;c.querySelectorAll('input[data-k]').forEach(function(i){var v=Math.max(0,Math.min(999,parseInt(i.value,10)||0));if(v){cnt[i.dataset.k]=v;any+=v}});
-    if(!any){toast('Add at least one count');return}var d=new Date();d.setDate(d.getDate()-(+$('#actDay').value||0));
+    if(!any){toast('Add at least one count');return}actCommit(x,cnt,note,'Saved')}}
+/* One-tap save (Andrew Oct 21): used by the Save my note button and the manual Save above. */
+function actCommit(x,cnt,note,msg){var c=$('#actConfirm');var d=new Date();d.setDate(d.getDate()-(+$('#actDay').value||0));
     var F=D.meta.activity_form,es=ACT.load(x.slug),ne={id:Date.now()+'-'+Math.random().toString(36).slice(2,7),d:ACT.ymd(d),t:Date.now(),c:cnt,note:(note||'').slice(0,500)};if(F){ne.s='pending';ne.w=actWho(x)}es.push(ne);
     if(!ACT.save(x.slug,es)){toast('Could not save on this device (storage is off or full)');return}
-    c.classList.add('hidden');c.innerHTML='';$('#actTxt').value='';actRender(x);toast('Saved');
-    if(F)ACT.sync(x.slug,F,function(ch){if(ch){toast('Saved and sent to Andrew');window.ACT_ONSYNC(x.slug)}else if(ACT.pending(ACT.load(x.slug)))toast('Saved. It will send when you are online')})}}
+    c.classList.add('hidden');c.innerHTML='';$('#actTxt').value='';actRender(x);toast(msg||'Saved');
+    if(F)ACT.sync(x.slug,F,function(ch){if(ch){toast((msg||'Saved')+' and sent to Andrew');window.ACT_ONSYNC(x.slug)}else if(ACT.pending(ACT.load(x.slug)))toast((msg||'Saved')+'. It will send when you are online')})}
 function actWire(x){if(!$('#actTotals'))return;actRender(x);var txt=$('#actTxt'),mic=$('#actMic'),L=$('#actMicL'),S=$('#actMicS');
-  $('#actRead').onclick=function(){var t=txt.value.trim();if(rec){try{rec.onresult=null;rec.stop()}catch(e){}}actConfirm(x,ACT.parse(t),t);txt.value='';txt.blur()};  /* Andrew Oct 21: clear the box once read; Cancel puts the note back */
+  $('#actRead').onclick=function(){var t=txt.value.trim();if(rec){try{rec.onresult=null;rec.stop()}catch(e){}}if(!t){toast('Say or type what you did first');return}var r=ACT.parse(t),C=ACT.CATS,cnt={},any=0;C.forEach(function(k){var v=Math.min(999,+r.counts[k.k]||0);if(v>0){cnt[k.k]=v;any+=v}});if(!any){actConfirm(x,r,t);txt.value='';txt.blur();return}var lbl=C.filter(function(k){return cnt[k.k]}).map(function(k){return k.l+' '+cnt[k.k]}).join(', ');txt.blur();actCommit(x,cnt,t,'Logged: '+lbl)};  /* Andrew Oct 21: clear the box once read; Cancel puts the note back */
   if(!ACT.speechOK()){mic.classList.add('hidden');L.textContent='Voice button not available in this browser';S.innerHTML='No problem: tap the box below and use the 🎤 on your phone\'s keyboard to dictate, or just type.';return}
   var R=window.SpeechRecognition||window.webkitSpeechRecognition,rec=null,base='';
   mic.onclick=function(){if(rec){try{rec.stop()}catch(e){}return}
@@ -257,5 +259,5 @@ function actWire(x){if(!$('#actTotals'))return;actRender(x);var txt=$('#actTxt')
     rec.onstart=function(){mic.classList.add('on');L.textContent='Listening… tap again to stop';S.textContent='Say what you did today.'};
     rec.onresult=function(ev){var f='',it='';for(var i=0;i<ev.results.length;i++){if(ev.results[i].isFinal)f+=ev.results[i][0].transcript;else it+=ev.results[i][0].transcript}txt.value=(base?base+', ':'')+(f+it).trim()};
     rec.onerror=function(ev){var m={'not-allowed':'Microphone access is off for this site. You can type, or use your keyboard\'s 🎤.','service-not-allowed':'Voice is blocked here. You can type, or use your keyboard\'s 🎤.','no-speech':'Didn\'t catch that. Tap the mic and try again.','network':'Voice needs an internet connection. You can type instead.','audio-capture':'No microphone found. You can type instead.'}[ev.error];S.textContent=m||'Voice stopped. You can type instead.'};
-    rec.onend=function(){mic.classList.remove('on');rec=null;L.textContent='Tap the mic and say what you did';var t=txt.value.trim();if(t&&t!==base){actConfirm(x,ACT.parse(t),t);txt.value=''}};
+    rec.onend=function(){mic.classList.remove('on');rec=null;L.textContent='Tap the mic and say what you did';var t=txt.value.trim();if(t&&t!==base)S.textContent='Got it. Tap Save my note to log it.'};
     try{rec.start()}catch(e){rec=null;S.textContent='Voice could not start. You can type instead.'}}}
